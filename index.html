@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>7В уншлагын танхим</title>
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,400;7..72,600&family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a reading desk. The passage sits on a paper sheet in a book face;
+   controls below it, class results in a ledger column on the right. */
+:root{
+  --bg:#eef1f4; --surface:#ffffff; --paper:#fbfaf6; --ink:#1c2733; --muted:#5d6b7a; --line:#d6dce3;
+  --accent:#0f6e8c; --accent-ink:#ffffff; --accent-soft:#dff0f5;
+  --good:#17703f; --good-soft:#dcf3e4; --warn:#8a5a00; --warn-soft:#fbedcc; --bad:#a3262b; --bad-soft:#fbe1e1;
+  --font-ui:"Noto Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --font-read:"Literata",Georgia,"Times New Roman",serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#11171d; --surface:#1a222b; --paper:#202a34; --ink:#e7edf2; --muted:#9aa8b6; --line:#33404d;
+    --accent:#54b8d6; --accent-ink:#06222b; --accent-soft:#173844;
+    --good:#6fd59a; --good-soft:#173826; --warn:#f0c264; --warn-soft:#3d3115; --bad:#ff9a9a; --bad-soft:#452024;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#11171d; --surface:#1a222b; --paper:#202a34; --ink:#e7edf2; --muted:#9aa8b6; --line:#33404d;
+  --accent:#54b8d6; --accent-ink:#06222b; --accent-soft:#173844;
+  --good:#6fd59a; --good-soft:#173826; --warn:#f0c264; --warn-soft:#3d3115; --bad:#ff9a9a; --bad-soft:#452024;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+button,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+header{background:var(--surface);border-bottom:1px solid var(--line)}
+header .wrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;padding-bottom:14px}
+h1{font-size:19px;margin:0;line-height:1.25;text-wrap:balance}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px}
+.pick{display:flex;flex-direction:column;gap:6px;flex:1 1 240px;min-width:0}
+.pick label,.steplabel{font-weight:700;font-size:14px}
+select{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:0 12px;height:48px;width:100%;font-size:16px}
+#startCard{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;align-items:flex-end;gap:14px 18px;position:sticky;top:0;z-index:10;box-shadow:0 4px 14px rgba(0,0,0,.08)}
+#startCard .go{display:flex;flex-direction:column;gap:6px;flex:2 1 320px;min-width:0}
+#startCard .btn{min-height:48px;flex:1 1 120px}
+body.is-rec #startCard .pick,body.is-rec #btnStart,body.is-rec #btnRetry,body.is-rec .steplabel{display:none}
+body.is-rec #startCard .row{justify-content:flex-end}
+@media (max-width:600px){
+  header .wrap{padding-top:10px;padding-bottom:10px}
+  h1{font-size:17px}
+  main.wrap{gap:12px;padding-top:12px}
+  .col{gap:12px}
+  .card{padding:12px}
+  #startCard{border-radius:0 0 12px 12px;margin:0 -16px;border-left:0;border-right:0;padding:12px 16px}
+  #passage{font-size:20px;line-height:1.95;padding:14px 12px}
+  .w{padding:3px 2px}
+  .tile strong{font-size:22px}
+  #roster button{padding:11px 6px}
+  .btn.small{flex:1 1 100%;min-height:44px}
+  .row .btn.small{flex:0 0 auto}
+}
+main.wrap{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:18px;padding-top:18px;padding-bottom:28px;align-items:start}
+@media (max-width:860px){main.wrap{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:18px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.card h2{font-size:14px;margin:0;font-weight:700}
+.row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 10px}
+.passage-title{font-family:var(--font-read);font-size:20px;font-weight:600;margin:0}
+#passage{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:18px 16px;font-family:var(--font-read);font-size:21px;line-height:2.05}
+.w{border-radius:5px;padding:2px 3px;cursor:pointer;border-bottom:2px solid transparent;scroll-margin:140px 0 80px}
+.w:hover{background:var(--accent-soft)}
+.w.ok{background:var(--good-soft);color:var(--good)}
+.w.skip{background:var(--bad-soft);color:var(--bad);text-decoration:line-through}
+.w.miss{color:var(--bad);border-bottom:2px dotted var(--bad)}
+.w.cur{border-bottom-color:var(--accent);background:var(--accent-soft)}
+.hint{color:var(--muted);font-size:12.5px;margin:0}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;color:var(--muted)}
+.legend b{font-weight:600;padding:0 5px;border-radius:4px}
+.btns{display:flex;flex-wrap:wrap;gap:10px}
+.btn{flex:1 1 150px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:11px 14px;font-weight:600;cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.stop{background:var(--bad);color:var(--surface);border-color:var(--bad)}
+.btn.small{flex:0 0 auto;padding:7px 12px;font-size:13px;border-radius:8px}
+.btn.danger{color:var(--bad)}
+.btn svg{width:16px;height:16px;fill:currentColor;flex:none}
+.status{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;border-radius:999px;padding:3px 11px;background:var(--bg);color:var(--muted)}
+.status::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.status.rec{background:var(--bad-soft);color:var(--bad)}
+.status.done{background:var(--good-soft);color:var(--good)}
+.status.sel{background:var(--accent-soft);color:var(--accent)}
+@media (prefers-reduced-motion:no-preference){.status.rec::before{animation:blink 1.1s infinite}}
+@keyframes blink{50%{opacity:.25}}
+#live{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:52px;max-height:110px;overflow-y:auto;font-size:14px;color:var(--muted);overflow-wrap:anywhere}
+#live .part{font-style:italic;opacity:.75}
+audio{width:100%}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.tile span{font-size:12px;color:var(--muted);font-weight:600}
+.tile strong{font-size:26px;line-height:1.15;font-variant-numeric:tabular-nums}
+.tile small{font-size:11.5px;color:var(--muted)}
+.tile.good strong{color:var(--good)} .tile.bad strong{color:var(--bad)}
+.bar{height:8px;background:var(--bg);border-radius:99px;overflow:hidden;border:1px solid var(--line)}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+.meta{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+#prev{font-size:13px;color:var(--muted);margin:0}
+ul#roster{list-style:none;margin:0;padding:0;max-height:360px;overflow-y:auto;border-top:1px solid var(--line)}
+#roster li{border-bottom:1px solid var(--line)}
+#roster button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;background:none;border:0;padding:8px 6px;cursor:pointer;text-align:left}
+#roster button:hover{background:var(--bg)}
+#roster li.on button{background:var(--accent-soft)}
+#roster .nm{font-weight:500}
+.pill{font-size:11.5px;font-weight:600;border-radius:6px;padding:2px 8px;white-space:nowrap;background:var(--bg);color:var(--muted);font-variant-numeric:tabular-nums}
+.pill.good{background:var(--good-soft);color:var(--good)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.count{font-size:12px;color:var(--muted);font-weight:400}
+#toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:10px;font-size:14px;max-width:min(92vw,520px);box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:20}
+[hidden]{display:none!important}
+footer{color:var(--muted);font-size:12px;text-align:center;padding:0 16px 22px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div>
+      <h1>7В ангийн уншлагын танхим</h1>
+      <p class="sub">Англи хэлний уншлага, дуудлагын үнэлгээ</p>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="card" id="startCard">
+    <div class="pick">
+      <label for="studentSelect">1. Нэрээ сонго</label>
+      <select id="studentSelect"><option value="">Сурагчаа сонгоно уу</option></select>
+    </div>
+    <div class="go">
+      <div class="row">
+        <span class="steplabel">2. Уншиж эхэл</span>
+        <span id="status" class="status">Микрофон шалгаж байна</span>
+      </div>
+      <div class="btns">
+        <button id="btnStart" class="btn primary" type="button" disabled>
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1a2.5 2.5 0 0 0-2.5 2.5v4a2.5 2.5 0 0 0 5 0v-4A2.5 2.5 0 0 0 8 1zM3.5 7.5a4.5 4.5 0 0 0 3.8 4.4V14h1.4v-2.1a4.5 4.5 0 0 0 3.8-4.4h-1.3a3.2 3.2 0 0 1-6.4 0z"/></svg>
+          Уншиж эхлэх
+        </button>
+        <button id="btnStop" class="btn stop" type="button" disabled>
+          <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5"/></svg>
+          Дуусгах
+        </button>
+        <button id="btnRetry" class="btn" type="button" disabled>Дахин унших</button>
+      </div>
+    </div>
+  </section>
+  <div class="col">
+    <section class="card">
+      <div class="row">
+        <h2 class="passage-title">Dylan, Glasgow</h2>
+        <button id="btnListen" class="btn small" type="button">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6h3l4-3v10L5 10H2zM11 5.2a4 4 0 0 1 0 5.6l-.9-.9a2.7 2.7 0 0 0 0-3.8z"/></svg>
+          <span id="listenLabel">Эхийг бүтнээр сонсох</span>
+        </button>
+      </div>
+      <div class="tags"><span class="tag">Facts and routines</span><span class="tag">Moment of speaking</span><span class="tag">Around now</span></div>
+      <div id="passage" lang="en"></div>
+      <div class="legend">
+        <span><b class="w ok">зөв</b> зөв уншсан</span>
+        <span><b class="w skip">алгассан</b> алгассан эсвэл буруу</span>
+        <span><b class="w miss">уншаагүй</b> хүрч уншаагүй</span>
+      </div>
+      <p class="hint">Үг дээр дарж зөв дуудлагыг сонсоно. Унших үед үг сонсох боломжгүй.</p>
+    </section>
+
+    <section class="card">
+      <h2>Таньсан яриа</h2>
+      <div id="playback" hidden>
+        <p class="hint" style="margin-bottom:6px">Өөрийн уншсан бичлэг (хадгалагдахгүй, зөвхөн одоо сонсоно)</p>
+        <audio id="player" controls></audio>
+      </div>
+      <div id="live" lang="en">Нэрээ сонгоод «Уншиж эхлэх» товчийг дарна уу.</div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section class="card">
+      <h2>Энэ уншлагын дүн</h2>
+      <div class="tiles">
+        <div class="tile"><span>Нарийвчлал</span><strong id="sAcc">0%</strong><small>зөв уншсан хувь</small></div>
+        <div class="tile"><span>Хурд</span><strong id="sWpm">0</strong><small>үг / минут</small></div>
+        <div class="tile good"><span>Зөв үг</span><strong id="sOk">0</strong><small id="sTotal">нийт үгээс</small></div>
+        <div class="tile bad"><span>Алдсан үг</span><strong id="sBad">0</strong><small>алгассан, уншаагүй</small></div>
+      </div>
+      <div>
+        <div class="meta"><span>Явц <span id="sProg">0%</span></span><span>Хугацаа <span id="sTime">0:00</span></span></div>
+        <div class="bar"><i id="bar"></i></div>
+      </div>
+      <p id="prev" hidden></p>
+    </section>
+
+    <section class="card">
+      <div class="row">
+        <h2>7В ангийн сурагчид <span class="count" id="readCount"></span></h2>
+      </div>
+      <ul id="roster"></ul>
+      <p class="hint" id="storeNote">Дүн ачаалж байна.</p>
+      <div class="btns">
+        <button id="btnCsv" class="btn small" type="button">Ангийн дүн татах (CSV)</button>
+        <button id="btnTxt" class="btn small" type="button">Сурагчийн тайлан (TXT)</button>
+        <button id="btnClear" class="btn small danger" type="button">Бүх дүнг арилгах</button>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer>7В анги. Англи хэлний уншлагын үнэлгээ.</footer>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+/* ---------- Data ---------- */
+const STUDENTS = ["Амарбат","Ананд Э","Анхмаа","Борчи","Ган-Эрдэнэ","Гийгүүлэн","Гэгээлэн Б","Гэгээлэн Э","Даваабаяр","Есөнмөнх","Манлай","Маралгуа","Мөнхсарнай","Мөнх-Учрал","Мөнххуяг","Нарансолонго","Нямхүү","Сарангоо","Содномдорж","Тэмүүлэн","Хүслэн","Энхсайхан П","Энх-Эрдэнэ","Эрхэс"];
+const PASSAGE_ID = "dylan-glasgow";
+const PASSAGE = "I always get up late on Saturdays. I usually have breakfast at lunchtime! But this week my parents are doing some work on the house. They’re changing the windows and they’re putting in a new kitchen. The noise is terrible. So today I’m breaking my usual Saturday routine. It’s only 9 a.m., but I’m not lying in my bed. I’m with my friend Gareth, and we’re walking up a mountain. The sun is shining on my back. It’s great! Gareth does this every week. Now I understand why.";
+
+/* ---------- Pure scoring logic ---------- */
+/*PURE-START*/
+function norm(w){
+  return w.toLowerCase().replace(/[‘’`]/g,"'").replace(/[^a-z0-9']/g,"").replace(/^'+|'+$/g,"");
+}
+// Other spellings the recognizer may return for the same spoken word.
+const ALT = { gareth:["garrett","garret","garath","gareth's","garth"], "9":["nine"], am:["a.m"], lunchtime:["lunch-time"] };
+function tokenizeSpoken(text){
+  let t = " " + text.toLowerCase().replace(/[‘’`]/g,"'") + " ";
+  t = t.replace(/\bthey are\b/g,"they're").replace(/\bwe are\b/g,"we're").replace(/\bi am\b/g,"i'm").replace(/\bit is\b/g,"it's")
+       .replace(/\blunch time\b/g,"lunchtime").replace(/\b9:00\b/g,"9").replace(/\ba\.\s?m\b\.?/g,"am").replace(/\b(9|nine) a m\b/g,"9 am");
+  return t.split(/\s+/).map(norm).filter(Boolean);
+}
+function same(spoken, target){
+  const a = spoken.replace(/'/g,""), b = target.replace(/'/g,"");
+  if (a === b) return true;
+  const alts = ALT[target];
+  return !!alts && alts.some(x => x.replace(/[^a-z0-9]/g,"") === a);
+}
+// Walks the spoken words along the passage. A spoken word may match the expected
+// word or one of the next two; words jumped over count as skipped.
+function align(targets, spokenWords, finished){
+  const st = targets.map(() => "pending");
+  let idx = 0;
+  for (const s of spokenWords){
+    if (idx >= targets.length) break;
+    for (let j = idx; j < Math.min(idx + 3, targets.length); j++){
+      if (same(s, targets[j])){
+        for (let k = idx; k < j; k++) st[k] = "skip";
+        st[j] = "ok"; idx = j + 1; break;
+      }
+    }
+  }
+  if (finished) for (let k = idx; k < st.length; k++) st[k] = "miss";
+  const ok = st.filter(x => x === "ok").length;
+  const bad = st.filter(x => x === "skip" || x === "miss").length;
+  return { st, idx, ok, bad };
+}
+/*PURE-END*/
+
+/* ---------- State ---------- */
+const WORDS = PASSAGE.trim().split(/\s+/);
+const TARGETS = WORDS.map(norm);
+const $ = id => document.getElementById(id);
+const IS_ANDROID = /Android/i.test(navigator.userAgent);
+const hasClaude = !!(window.claude && typeof window.claude.use === "function");
+const cap = name => hasClaude ? Promise.resolve(window.claude.use(name)).catch(() => null) : Promise.resolve(null);
+
+let student = -1;            // index into STUDENTS
+let recording = false, stopping = false;
+let finalText = "", partial = "", baseText = "", lastCur = -1;
+let startedAt = 0, firstWordAt = 0, endedAt = 0, timer = null;
+let score = align(TARGETS, [], false);
+let results = [];            // saved attempts
+let engine = null;           // "claude" | "web" | null
+let dict = null, rec = null, tts = null, dl = null, db = null;
+let mediaRec = null, chunks = [], stream = null;
+let clearArmed = false;
+
+/* ---------- Small helpers ---------- */
+let toastT = null;
+function toast(msg){ const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 4500); }
+function setStatus(text, cls){ const s = $("status"); s.textContent = text; s.className = "status" + (cls ? " " + cls : ""); }
+function fmtTime(sec){ return Math.floor(sec/60) + ":" + String(sec%60).padStart(2,"0"); }
+function fmtDate(iso){ const d = new Date(iso); return isNaN(d) ? "" : d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0") + " " + String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0"); }
+function elapsedSec(){
+  const from = firstWordAt || startedAt; if (!from) return 0;
+  return Math.max(0, Math.round(((endedAt || Date.now()) - from) / 1000));
+}
+function level(acc){ return acc >= 90 ? "good" : acc >= 70 ? "warn" : "bad"; }
+
+/* ---------- Passage ---------- */
+const spans = [];
+function buildPassage(){
+  const box = $("passage");
+  WORDS.forEach((w, i) => {
+    const s = document.createElement("span");
+    s.className = "w"; s.textContent = w; s.tabIndex = 0; s.setAttribute("role","button");
+    const say = () => { if (recording) return; speak(w.replace(/[.,!?]+$/,"")); };
+    s.addEventListener("click", say);
+    s.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); say(); } });
+    box.appendChild(s); box.appendChild(document.createTextNode(" "));
+    spans.push(s);
+  });
+}
+function paint(){
+  score.st.forEach((x, i) => {
+    spans[i].className = "w" + (x === "ok" ? " ok" : x === "skip" ? " skip" : x === "miss" ? " miss" : "") + (recording && i === score.idx ? " cur" : "");
+  });
+  if (recording && score.idx !== lastCur && score.idx < spans.length){
+    lastCur = score.idx;
+    const calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    try { spans[score.idx].scrollIntoView({ block: "nearest", behavior: calm ? "auto" : "smooth" }); } catch (e){}
+  }
+  const total = TARGETS.length, sec = elapsedSec();
+  const acc = Math.round(score.ok / total * 100);
+  $("sAcc").textContent = acc + "%";
+  $("sWpm").textContent = sec > 0 ? Math.round(score.ok / sec * 60) : 0;
+  $("sOk").textContent = score.ok;
+  $("sBad").textContent = score.bad;
+  $("sTotal").textContent = "нийт " + total + " үгээс";
+  const prog = Math.round((score.ok + score.bad) / total * 100);
+  $("sProg").textContent = prog + "%"; $("bar").style.width = prog + "%";
+  $("sTime").textContent = fmtTime(sec);
+}
+function realign(finished){
+  score = align(TARGETS, tokenizeSpoken(finalText + " " + partial), !!finished);
+  paint();
+  const live = $("live"); live.textContent = "";
+  if (!finalText.trim() && !partial.trim()){ live.textContent = recording ? "Сонсож байна. Уншиж эхлээрэй." : ""; return; }
+  live.appendChild(document.createTextNode(finalText.trim() + " "));
+  if (partial){ const p = document.createElement("span"); p.className = "part"; p.textContent = partial; live.appendChild(p); }
+  live.scrollTop = live.scrollHeight;
+}
+
+/* ---------- Roster ---------- */
+function attemptsOf(i){ return results.filter(r => r.sid === i).sort((a,b) => String(a.at).localeCompare(String(b.at))); }
+function buildSelect(){
+  const sel = $("studentSelect");
+  STUDENTS.forEach((n, i) => { const o = document.createElement("option"); o.value = i; o.textContent = (i+1) + ". " + n; sel.appendChild(o); });
+  sel.addEventListener("change", () => chooseStudent(sel.value === "" ? -1 : +sel.value));
+}
+function renderRoster(){
+  const ul = $("roster"); ul.textContent = ""; let read = 0;
+  STUDENTS.forEach((n, i) => {
+    const at = attemptsOf(i), last = at[at.length - 1];
+    if (last) read++;
+    const li = document.createElement("li"); if (i === student) li.className = "on";
+    const b = document.createElement("button"); b.type = "button";
+    const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = (i+1) + ". " + n;
+    const p = document.createElement("span");
+    if (last){ p.className = "pill " + level(+last.accuracy || 0); p.textContent = (+last.accuracy || 0) + "% · " + (+last.wpm || 0) + " үг/мин" + (at.length > 1 ? " · " + at.length + " удаа" : ""); }
+    else { p.className = "pill"; p.textContent = "Уншаагүй"; }
+    b.append(nm, p); b.addEventListener("click", () => chooseStudent(i));
+    li.appendChild(b); ul.appendChild(li);
+  });
+  $("readCount").textContent = read + " / " + STUDENTS.length + " уншсан";
+  renderPrev();
+}
+function renderPrev(){
+  const p = $("prev"); const at = student >= 0 ? attemptsOf(student) : [];
+  if (!at.length || recording){ p.hidden = true; return; }
+  const best = at.reduce((m, r) => (+r.accuracy > +m.accuracy ? r : m), at[0]), last = at[at.length - 1];
+  p.textContent = STUDENTS[student] + ": " + at.length + " удаа уншсан. Сүүлд " + last.accuracy + "% (" + fmtDate(last.at) + "), хамгийн сайн " + best.accuracy + "%.";
+  p.hidden = false;
+}
+function chooseStudent(i){
+  if (recording){ toast("Уншиж байх үед сурагч солих боломжгүй. Эхлээд «Дуусгах» дарна уу."); $("studentSelect").value = student < 0 ? "" : student; return; }
+  student = i; $("studentSelect").value = i < 0 ? "" : i;
+  resetAttempt();
+  if (i >= 0 && engine) setStatus("Сонгосон: " + STUDENTS[i], "sel");
+  renderRoster();
+}
+function resetAttempt(){
+  finalText = ""; partial = ""; baseText = ""; lastCur = -1; startedAt = firstWordAt = endedAt = 0;
+  score = align(TARGETS, [], false); paint();
+  $("live").textContent = student < 0 ? "Нэрээ сонгоод «Уншиж эхлэх» товчийг дарна уу." : "«Уншиж эхлэх» товчийг дарна уу.";
+  $("playback").hidden = true; $("btnRetry").disabled = true;
+}
+
+/* ---------- Listening (text to speech) ---------- */
+function speak(text){
+  if (recording){ toast("Унших үед сонсох боломжгүй."); return; }
+  const fallback = () => {
+    try {
+      if (!("speechSynthesis" in window)) throw 0;
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text); u.lang = "en-US"; u.rate = 0.9;
+      window.speechSynthesis.speak(u);
+    } catch (e){ toast("Энэ хөтөч дээр дуудлага сонсгох боломжгүй байна."); }
+  };
+  if (tts) tts.speak(text, { language: "en", rate: 0.9 }).catch(e => { if (!e || (e.code !== "viewer_stopped" && e.code !== "busy")) fallback(); });
+  else fallback();
+}
+$("btnListen").addEventListener("click", () => speak(PASSAGE));
+
+/* ---------- Speech recognition ---------- */
+function onHeard(){ if (!firstWordAt) firstWordAt = Date.now(); }
+function setupClaudeDictation(d){
+  dict = d; engine = "claude";
+  d.onPartial(({text}) => { if (!recording) return; if (text) onHeard(); partial = text || ""; realign(); });
+  d.onFinal(({text}) => { if (!recording) return; if (text) onHeard(); finalText += " " + (text || ""); partial = ""; realign(); checkComplete(); });
+  d.onState(({state}) => { if (state === "idle" && recording && !stopping) finish(); });
+}
+function setupWebSpeech(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return false;
+  rec = new SR(); rec.continuous = true; rec.interimResults = true; rec.lang = "en-US";
+  rec.onresult = e => {
+    if (!recording) return;
+    let fin = "", interim = "";
+    for (let i = 0; i < e.results.length; i++){
+      const r = e.results[i], t = r[0].transcript;
+      if (!r.isFinal){ interim += t; continue; }
+      if (IS_ANDROID && r[0].confidence === 0) continue;   // Android Chrome repeats phrases as zero-confidence results
+      fin += " " + t;
+    }
+    finalText = baseText + fin; partial = interim; onHeard(); realign(); if (!interim) checkComplete();
+  };
+  rec.onerror = e => {
+    if (e.error === "not-allowed" || e.error === "service-not-allowed"){ abort("Микрофон ашиглах зөвшөөрөл олгогдоогүй байна. Хөтчийн хаягийн мөрөн дэх микрофоны тохиргоог зөвшөөрнө үү."); }
+    else if (e.error === "audio-capture"){ abort("Микрофон олдсонгүй. Микрофоноо холбоод дахин оролдоно уу."); }
+    else if (e.error === "network"){ abort("Яриа таних үйлчилгээнд холбогдож чадсангүй. Интернэт холболтоо шалгана уу."); }
+  };
+  rec.onend = () => {
+    if (!recording) return;
+    baseText = finalText;
+    if (stopping) finish(); else { try { rec.start(); } catch (e){} }
+  };
+  engine = "web"; return true;
+}
+function checkComplete(){ if (recording && !stopping && score.idx >= TARGETS.length) stop(); }
+
+function start(){
+  if (student < 0){ toast("Эхлээд сурагчаа сонгоно уу."); $("studentSelect").focus(); return; }
+  if (!engine || recording) return;
+  try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e){}
+  if (tts) { try { tts.stop(); } catch (e){} }
+  resetAttempt();
+  recording = true; stopping = false; startedAt = Date.now(); document.body.classList.add("is-rec");
+  if (engine === "claude"){
+    dict.start().catch(e => {
+      const c = e && e.code;
+      abort(c === "not_granted" ? "Микрофон ашиглах зөвшөөрөл олгогдоогүй байна." : "Микрофон эхэлсэнгүй. Дахин дарж үзнэ үү.");
+    });
+  } else {
+    try { rec.start(); } catch (e){}
+    startAudioCapture();
+  }
+  timer = setInterval(paint, 1000);
+  $("btnStart").disabled = true; $("btnStop").disabled = false; $("btnRetry").disabled = true;
+  setStatus("Бичиж байна: " + STUDENTS[student], "rec");
+  realign(); renderPrev();
+}
+function stop(){
+  if (!recording || stopping) return;
+  stopping = true; endedAt = Date.now(); $("btnStop").disabled = true;
+  if (engine === "claude"){ Promise.resolve().then(() => dict.stop()).catch(() => {}).then(finish); }
+  else { try { rec.stop(); } catch (e){} setTimeout(finish, 1500); }
+}
+function endCommon(){
+  recording = false; stopping = false; clearInterval(timer); timer = null; document.body.classList.remove("is-rec");
+  if (!endedAt) endedAt = Date.now();
+  stopAudioCapture();
+  $("btnStart").disabled = !engine; $("btnStop").disabled = true;
+}
+function abort(msg){
+  if (!recording) return;
+  if (engine === "web"){ recording = false; try { rec.abort(); } catch (e){} }
+  endCommon(); resetAttempt(); setStatus("Бэлэн"); toast(msg); renderPrev();
+}
+function finish(){
+  if (!recording) return;
+  endCommon(); partial = ""; realign(true);
+  $("btnRetry").disabled = false;
+  if (score.ok === 0){
+    setStatus("Яриа танигдсангүй"); toast("Яриа танигдсангүй тул дүн хадгалаагүй. Микрофондоо ойртож дахин уншина уу."); renderPrev(); return;
+  }
+  const sec = Math.max(1, elapsedSec());
+  const r = {
+    sid: student, student: STUDENTS[student], passage: PASSAGE_ID, at: new Date().toISOString(),
+    accuracy: Math.round(score.ok / TARGETS.length * 100), wpm: Math.round(score.ok / sec * 60),
+    correct: score.ok, wrong: score.bad, total: TARGETS.length, seconds: sec,
+    skipped: WORDS.filter((w, i) => score.st[i] === "skip"), unread: score.st.filter(x => x === "miss").length,
+    heard: finalText.trim().slice(0, 1500)
+  };
+  setStatus("Дууссан: " + r.accuracy + "%", "done");
+  saveResult(r);
+}
+
+/* Own-voice playback: only outside Claude, where the page may open the microphone itself. */
+const canCapture = !hasClaude && !!(navigator.mediaDevices && window.MediaRecorder) && !IS_ANDROID;
+async function startAudioCapture(){
+  if (!canCapture) return;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    if (!recording){ stream.getTracks().forEach(t => t.stop()); stream = null; return; }
+    chunks = []; mediaRec = new MediaRecorder(stream);
+    mediaRec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    mediaRec.onstop = () => {
+      const blob = new Blob(chunks, { type: mediaRec.mimeType || "audio/webm" });
+      if (blob.size){ $("player").src = URL.createObjectURL(blob); $("playback").hidden = false; }
+      if (stream){ stream.getTracks().forEach(t => t.stop()); stream = null; }
+    };
+    mediaRec.start();
+  } catch (e){ stream = null; }
+}
+function stopAudioCapture(){ try { if (mediaRec && mediaRec.state === "recording") mediaRec.stop(); } catch (e){} }
+
+/* ---------- Saving results ---------- */
+const LS_KEY = "unshlaga-7v-results";
+function loadLocal(){ try { const a = JSON.parse(localStorage.getItem(LS_KEY) || "[]"); return Array.isArray(a) ? a : []; } catch (e){ return []; } }
+function saveLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify(results)); return true; } catch (e){ return false; } }
+function newId(){ return "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+async function saveResult(r){
+  r.id = newId();
+  if (db){
+    try { const body = Object.assign({}, r); delete body.id; await db.collection("results").doc(r.id).set(body); toast(r.student + ": дүн хадгалагдлаа."); }
+    catch (e){ results.push(r); renderRoster(); toast("Дүнг хадгалж чадсангүй. Хуудсаа хаахаас өмнө ангийн дүнг CSV-ээр татаж авна уу."); }
+  } else {
+    results.push(r); renderRoster();
+    toast(saveLocal() ? r.student + ": дүн энэ төхөөрөмж дээр хадгалагдлаа." : "Дүнг хадгалж чадсангүй. Хуудсаа хаахаас өмнө CSV-ээр татаж авна уу.");
+  }
+}
+function useLocalStore(){
+  results = loadLocal(); renderRoster();
+  $("storeNote").textContent = "Дүн зөвхөн энэ төхөөрөмжийн хөтөч дээр хадгалагдана. Ангийн дүнг CSV-ээр татаж хадгалаарай.";
+}
+function useCloudStore(d){
+  db = d;
+  const note = $("storeNote");
+  const slow = setTimeout(() => { note.textContent = "Хадгалсан дүнд одоогоор холбогдож чадахгүй байна. Доорх жагсаалт хуучин байж болно."; }, 10000);
+  d.collection("results").onSnapshot(snap => {
+    results = snap.docs.map(x => Object.assign({ id: x.id }, x.data())).filter(r => Number.isInteger(r.sid) && r.sid >= 0 && r.sid < STUDENTS.length);
+    renderRoster();
+    if (!snap.metadata.fromCache){ clearTimeout(slow); note.textContent = "Дүн бүр автоматаар хадгалагдана. Өөр төхөөрөмжөөс нээхэд ч харагдана."; }
+  }, () => { clearTimeout(slow); db = null; useLocalStore(); });
+}
+$("btnClear").addEventListener("click", async () => {
+  const b = $("btnClear");
+  if (!results.length){ toast("Арилгах дүн алга."); return; }
+  if (!clearArmed){ clearArmed = true; b.textContent = "Итгэлтэй юу? Дахин дарна уу"; setTimeout(() => { clearArmed = false; b.textContent = "Бүх дүнг арилгах"; }, 4000); return; }
+  clearArmed = false; b.textContent = "Бүх дүнг арилгах";
+  if (db){
+    try { for (const r of results.slice()) await db.collection("results").doc(r.id).delete(); toast("Бүх дүн арилгагдлаа."); }
+    catch (e){ toast("Дүнг арилгаж чадсангүй. Зөвхөн хуудасны эзэмшигч арилгах боломжтой."); }
+  } else { results = []; saveLocal(); renderRoster(); toast("Бүх дүн арилгагдлаа."); }
+});
+
+/* ---------- Export ---------- */
+async function saveFile(filename, text){
+  if (dl){
+    try { await dl.save({ filename, data: text }); }
+    catch (e){ if (!e || e.code !== "declined") toast("Файлыг татаж чадсангүй. Дахин оролдоно уу."); }
+    return;
+  }
+  if (hasClaude){ toast("Энэ орчинд файл татах боломжгүй байна."); return; }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" })); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+const csvCell = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
+const today = () => fmtDate(new Date().toISOString()).slice(0, 10);
+$("btnCsv").addEventListener("click", () => {
+  if (!results.length){ toast("Одоогоор хадгалсан дүн алга."); return; }
+  const rows = [["№","Сурагч","Анги","Огноо","Нарийвчлал (%)","Хурд (үг/мин)","Зөв үг","Алдсан үг","Нийт үг","Хугацаа (сек)","Алгассан үгс","Уншаагүй үгийн тоо"]];
+  results.slice().sort((a,b) => a.sid - b.sid || String(a.at).localeCompare(String(b.at))).forEach(r => {
+    rows.push([r.sid + 1, STUDENTS[r.sid], "7В", fmtDate(r.at), r.accuracy, r.wpm, r.correct, r.wrong, r.total, r.seconds, (Array.isArray(r.skipped) ? r.skipped : []).join(" "), r.unread || 0]);
+  });
+  saveFile("7V_unshlagiin_dun_" + today() + ".csv", "﻿" + rows.map(r => r.map(csvCell).join(",")).join("\r\n") + "\r\n");
+});
+$("btnTxt").addEventListener("click", () => {
+  if (student < 0){ toast("Тайлан татахын тулд сурагчаа сонгоно уу."); return; }
+  const at = attemptsOf(student);
+  if (!at.length){ toast(STUDENTS[student] + " одоогоор уншаагүй байна."); return; }
+  const L = ["7В АНГИ. АНГЛИ ХЭЛНИЙ УНШЛАГЫН ТАЙЛАН", "", "Сурагч: " + STUDENTS[student], "Эх: Dylan, Glasgow (" + TARGETS.length + " үг)", "Уншсан тоо: " + at.length, ""];
+  at.forEach((r, i) => {
+    L.push((i+1) + "-р уншлага, " + fmtDate(r.at));
+    L.push("  Нарийвчлал: " + r.accuracy + "%   Хурд: " + r.wpm + " үг/мин   Хугацаа: " + r.seconds + " сек");
+    L.push("  Зөв: " + r.correct + "   Алдсан: " + r.wrong + "   Үүнээс хүрч уншаагүй: " + (r.unread || 0));
+    const sk = Array.isArray(r.skipped) ? r.skipped : [];
+    L.push("  Алгассан эсвэл буруу уншсан үгс: " + (sk.length ? sk.join(", ") : "байхгүй"));
+    L.push("");
+  });
+  saveFile("7V_" + (student + 1) + "_tailan_" + today() + ".txt", L.join("\r\n"));
+});
+
+/* ---------- Start up ---------- */
+$("btnStart").addEventListener("click", start);
+$("btnStop").addEventListener("click", stop);
+$("btnRetry").addEventListener("click", start);
+buildSelect(); buildPassage(); paint(); renderRoster();
+if (!canCapture) $("playback").hidden = true;
+
+(async () => {
+  const [d, t, s, store] = await Promise.all([cap("dictation"), cap("tts"), cap("downloads"), cap("db")]);
+  tts = t; dl = s;
+  if (store) useCloudStore(store); else useLocalStore();
+  if (d) setupClaudeDictation(d); else if (!hasClaude) setupWebSpeech();
+  if (engine){ $("btnStart").disabled = false; setStatus(student >= 0 ? "Сонгосон: " + STUDENTS[student] : "Бэлэн", student >= 0 ? "sel" : ""); }
+  else {
+    setStatus("Микрофон ажиллахгүй");
+    $("live").textContent = hasClaude
+      ? "Энд яриа таних боломжгүй байна. Хуудсыг компьютерын Chrome хөтчөөр, Claude-д нэвтэрсэн байдлаар нээнэ үү."
+      : "Энэ хөтөч яриа таних боломжгүй. Google Chrome эсвэл Microsoft Edge хөтчөөр нээнэ үү.";
+  }
+})();
+</script>
+</body>
+</html>
